@@ -1,45 +1,28 @@
-# VERSION      1
+FROM centos
 
-FROM ubuntu:12.04
+MAINTAINER Derek Carr <decarr@redhat.com>
 
-MAINTAINER gilacode
+# update, install required, clean
+RUN yum -y update && yum install -y httpd php php-devel wget php-pear unzip gcc-c++ make && yum clean all
 
-# update ubuntu
-RUN apt-get update
+# update pecl channels
+RUN pecl update-channels
 
-
-# install required
-RUN apt-get install -q -y build-essential apache2 php5 libapache2-mod-php5 php5-dev php-pear wget unzip
-
-# set environment variables for apache
-ENV APACHE_RUN_USER www-data
-ENV APACHE_RUN_GROUP www-data
-ENV APACHE_LOG_DIR /var/log/apache2
-
-# check php.ini
-#RUN php --ini
-
-#install mongo drivers
-RUN pecl install mongo
-#RUN echo "extension=mongo.so" >> /etc/php5/apache2/php.ini
-RUN touch /etc/php5/conf.d/mongo.ini
-RUN echo "extension=mongo.so" >> /etc/php5/conf.d/mongo.ini
+# install mongo drivers without Cyrus SASL (MongoDB Enterprise Authentication)
+RUN printf "no\n" | pecl install mongo && cd /etc && echo "extension=mongo.so" >> /etc/php.d/mongo.ini
 
 # install RockMongo
-RUN cd /root && wget --no-check-certificate https://github.com/gilacode/rockmongo/archive/master.zip -O rockmongo-master.zip
-RUN cd /root && unzip rockmongo-master.zip -d /var/ && rm -fr /var/www && mv /var/rockmongo-master/ /var/www
-#RUN cd /var/www && ls -al
+RUN cd /root && wget -O rockmongo-1.1.5.zip http://rockmongo.com/downloads/go?id=12 && unzip rockmongo-1.1.5.zip -d /var/www/ && rm -R /var/www/html && mv /var/www/rockmongo/ /var/www/html
 
-# increase php upload size
-RUN sed -i 's/upload_max_filesize = 2M/upload_max_filesize = 10M/g' /etc/php5/apache2/php.ini
-RUN sed -i 's/post_max_size = 2M/post_max_size = 10M/g' /etc/php5/apache2/php.ini
+# increase php upload size 
+RUN sed -i 's/upload_max_filesize = 2M/upload_max_filesize = 10M/g' /etc/php.ini && sed -i 's/post_max_size = 2M/post_max_size = 10M/g' /etc/php.ini
 
-#RUN cat /etc/php5/apache2/php.ini | grep mongo.so
-RUN cat /etc/php5/conf.d/mongo.ini | grep mongo.so
+ADD config.php /var/www/rockmongo/config.php
 
-#RUN echo '<?php phpInfo(); ?>' > /var/www/html/info.php
+# expose php information
+RUN echo '<?php phpInfo(); ?>' > /var/www/html/info.php
 
+# Expose ports
+EXPOSE 80
 
-ENTRYPOINT ["/usr/sbin/apache2"]
-CMD ["-D", "FOREGROUND"]
-
+CMD ["/usr/sbin/httpd", "-D", "FOREGROUND"]
