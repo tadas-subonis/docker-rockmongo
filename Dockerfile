@@ -16,7 +16,7 @@ RUN cd /root && wget -O rockmongo-1.1.5.zip http://rockmongo.com/downloads/go?id
 
 # increase php upload size 
 RUN sed -i 's/upload_max_filesize = 2M/upload_max_filesize = 10M/g' /etc/php.ini && sed -i 's/post_max_size = 2M/post_max_size = 10M/g' /etc/php.ini
-
+RUN rm /var/www/rockmongo/config.php
 ADD config.php /var/www/rockmongo/config.php
 
 # expose php information
